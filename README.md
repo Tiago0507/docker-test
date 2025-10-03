@@ -9,50 +9,89 @@ Universidad Icesi. Cali, Valle del Cauca, Colombia
 
 ---
 
-## Project Configuration
+## Introduction
 
-This section provides a high-level overview of the core files used for containerization and automation.
-
-### Dockerfile Strategy
-
-The project uses a `Dockerfile` with a multi-stage build approach. This is a best practice for building web applications as it produces a final image that is optimized for production.
-
--   **Why Multi-Stage?** The first stage (the "build stage") uses a Node.js environment to compile the React application and its dependencies into static files. The second stage (the "production stage") starts from a fresh, lightweight Nginx web server image and copies *only* the static files from the first stage.
--   **Benefits**: This method drastically reduces the final image size and improves security by excluding build tools, development dependencies, and source code from the production container. The result is a lean, fast, and secure image.
-
-### GitHub Actions Workflow
-
-Automation is handled by a workflow file located at `.github/workflows/docker-publish.yml`. This file defines a CI/CD pipeline that automates the process from code push to image deployment.
-
--   **Trigger**: The pipeline is configured to run automatically on every `push` to the `main` branch, ensuring that the latest code is always deployed.
--   **Process**: The workflow executes a series of automated steps on a GitHub-hosted runner. It checks out the code, prepares the Docker build environment, securely logs into Docker Hub using credentials stored as repository secrets, and finally builds and pushes the image. This creates a fully automated and reliable deployment process.
+This project demonstrates a complete Continuous Integration and Continuous Deployment (CI/CD) pipeline for a web application. The process involves containerizing a React application using Docker, and then automating the build and publication of the container image to Docker Hub through a GitHub Actions workflow. The final result is a production-ready image that can be deployed anywhere, including locally for testing.
 
 ---
 
-## CI/CD Pipeline Implementation
+## End-to-End CI/CD Process
 
-This document outlines the steps followed to create a CI/CD pipeline that automatically builds a Docker image from a React application and deploys it to Docker Hub using GitHub Actions.
+This section provides a detailed, step-by-step guide of the entire implementation.
 
-### 1. GitHub Secrets
+### Step 1: Containerizing the Application with a Dockerfile
 
-To ensure a secure connection with Docker Hub, repository secrets are configured in GitHub. Two secrets are created: `DOCKERHUB_USERNAME` for the user ID and `DOCKERHUB_TOKEN` for a personal access token with write permissions. This avoids exposing sensitive credentials directly in the workflow file.
+The foundation of this process is the `Dockerfile`, which contains the instructions to package the React application into a standardized container image. A **multi-stage build** strategy is used to create a lean, secure, and optimized production image.
+
+-   **Build Stage:** A temporary build environment is created using a Node.js image. In this stage, all the necessary dependencies are installed, and the React application is compiled into static HTML, CSS, and JavaScript files.
+-   **Production Stage:** A new, lightweight Nginx web server image is used as the base. Only the compiled static files from the build stage are copied over. This ensures that the final image does not contain any development dependencies, source code, or unnecessary build tools, resulting in a smaller and more secure container.
+
+### Step 2: Setting Up Secure Credentials
+
+To allow the automated pipeline to publish images to Docker Hub, secure authentication must be configured. This is done by generating a Personal Access Token and storing it securely in GitHub.
+
+1.  **Generate Docker Hub Access Token:** A new Personal Access Token is created in the user's Docker Hub account under **Account Settings > Security**. This token is granted read, write, and delete permissions, allowing it to manage repositories.
+
+2.  **Configure GitHub Secrets:** The credentials are then stored in the GitHub repository as encrypted secrets under **Settings > Secrets and variables > Actions**. Two secrets are created:
+    -   `DOCKERHUB_USERNAME`: The user's Docker Hub ID.
+    -   `DOCKERHUB_TOKEN`: The Personal Access Token generated in the previous step.
+
+This method ensures that sensitive credentials are never exposed directly in the source code.
 
 ![GitHub Secrets Configuration](./images/github-secrets.jpeg)
 
-### 2. Running the Pipeline
+### Step 3: Automating the Pipeline with GitHub Actions
 
-The pipeline is triggered automatically on every push to the `main` branch. The GitHub Actions workflow checks out the code, sets up the Docker build environment, logs into Docker Hub using the configured secrets, and starts the build and push process.
+The CI/CD pipeline is defined in the `.github/workflows/docker-publish.yml` file. This workflow automates every step from code commit to image publication.
 
-![Running the Pipeline](./images/running-pipeline.jpeg)
+-   **Trigger:** The workflow is configured to run automatically on every `push` to the `main` branch.
+-   **Execution Flow:** When triggered, the workflow executes the following jobs on a GitHub-hosted runner:
+    1.  **Checkout Code:** It first checks out the latest version of the repository's code.
+    2.  **Set Up Docker:** It prepares the Docker build environment.
+    3.  **Log In to Docker Hub:** It securely logs into Docker Hub using the previously configured secrets.
+    4.  **Build and Push:** It builds the Docker image using the `Dockerfile` and pushes the newly created image to the Docker Hub repository, tagging it as `latest`.
 
-### 3. Successful Pipeline
+### Step 4: Verifying the Pipeline Execution
 
-Once all the steps are completed without errors, the workflow shows a successful run. This confirms that the Docker image has been built correctly according to the `Dockerfile` and has been pushed to the specified container registry.
+After pushing a change to the `main` branch, the pipeline's execution can be monitored in the "Actions" tab of the GitHub repository.
 
-![Successful Pipeline Run](./images/successful-pipeline.jpeg)
+-   **Pipeline in Progress:** The workflow shows the current step being executed.
 
-### 4. Deployment on Docker Hub
+    ![Running the Pipeline](./images/running-pipeline.jpeg)
 
-The final result of the pipeline is a new image pushed to Docker Hub. The image is tagged as `latest`, indicating it is the most recent version of the application. This image is now available for deployment in any environment that supports Docker containers.
+-   **Successful Execution:** A green checkmark indicates that all steps, including the final push to Docker Hub, have been completed successfully.
 
-![Image Deployed on Docker Hub](./images/image-deploy-docker.jpeg)
+    ![Successful Pipeline Run](./images/successful-pipeline.jpeg)
+
+-   **Final Artifact on Docker Hub:** The successful run results in the new image being available in the public Docker Hub repository, ready for deployment.
+
+    ![Image Deployed on Docker Hub](./images/image-deploy-docker.jpeg)
+
+---
+
+## Local Deployment and Verification
+
+The CI/CD pipeline handles the creation and publication of the image. To run and view the application, the image must be pulled from Docker Hub and executed as a container on a local machine with Docker installed.
+
+### Step 1: Pull the Image from Docker Hub
+
+Open a terminal and run the following command to download the application image to your local machine.
+
+```bash
+docker pull santiagovg/docker-test:latest
+```
+
+### Step 2: Run the Docker Container
+
+Execute the following command to start a container from the downloaded image. This command also maps a local port to the container's port, allowing you to access the application.
+
+```bash
+docker run -d -p 8080:80 santiagovg/docker-test:latest
+```
+
+### Step 3: Access the Application
+
+Once the container is running, open a web browser and navigate to the following URL:
+http://localhost:8080
+
+![Image Deployed on Docker Hub](./images/rick-and-morty.jpeg)
